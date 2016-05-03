@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <script>
+  var canvas; // heeft betrekking op disply area
+  var canvasContext; //heeft betrekking op onderliggende graphische informatie/objecten
+  var ballX = 50;
+  var ballY = 50;
+  var ballSpeedX = 10;
+  var ballSpeedY = 4;
+
+  var player1Score = 0; //score start waarde is uiteraard 0
+  var player2Score = 0;  //score start waarde is uiteraard 0
+
+  var paddle1Y = 250;
+  var paddle2Y = 250;
+  const PADDLE_THICKNESS = 10; // constant,
+  const PADDLE_HEIGHT = 100; //constant, nummer kan niet veranderd worden zolang het spel wordt gespeeld
+  const WINNING_SCORE = 3;
+
+  var showingWinScreen = false; //start als false, zodat er wat op het scherm gebeurt wanneer de waarde true is
+
+  function calculateMousePos (evt){ // evt = event, deze functie wordt uitgevoerd iedere keer dat de muis beweegt
+    var rect = canvas.getBoundingClientRect (); //gebied dat in browser zwart is, in dat geval het speelveld
+    var root =  document.documentElement; // verwijst naar HTML pagina
+    var mouseX = evt.clientX - rect.left - root.scrollLeft;
+    var mouseY = evt.clientY - rect.top - root.scrollTop;
+    return {
+        x:mouseX,
+        y:mouseY
+    };
+  }
+
+function handleMouseClick (evt) {
+        if (showingWinScreen) {
+          player1Score = 0;
+          player2Score = 0;
+          showingWinScreen = false;
+  }
+}
+
+    //window.onload = function => run code pas wanneer de pagina volledig geladen is
+    window.onload = function () {
+        canvas = document.getElementById('gameCanvas');
+        canvasContext = canvas.getContext('2d');
+
+        var framesPerSecond = 30; //deze functie staat hier omdat het alleen betrekking heeft op setInterval
+        setInterval(function() {
+          moveEverything ();
+          drawEverything ();
+        }, 1000/framesPerSecond); // zet interval in milliseconden voor calling function drawEverything
+
+        canvas.addEventListener ('mousedown', handleMouseClick);
+
+        canvas.addEventListener ('mousemove',
+          function (evt) {
+            var mousePos = calculateMousePos (evt);
+            paddle1Y = mousePos.y-(PADDLE_HEIGHT/2);
+          });
+      }
+
+    function ballReset () { // om bal in midden van speelveld te zetten
+          if (player1Score >= WINNING_SCORE ||
+              player2Score >= WINNING_SCORE) { // na winst van 1 vd spelers wordt score weer op 0 gezet voor beiden
+            showingWinScreen = true;
+        }
+        ballSpeedX = -ballSpeedX; // om bal terug te laten kaatsen, gebruik zelfde snelheid maar dan in negatieve waarde
+        ballX = canvas.width/2; //center-horizontaal positie
+        ballY = canvas.height/2; //center-verticaal positie
+    }
+
+    function computerMovement () {
+        var paddle2YCenter = paddle2Y + (PADDLE_HEIGHT/2); //om ervoor te zorgen dat bal wordt gelijnd aan center (=PADDLE_HEIGHT/2) van paddle
+        if (paddle2YCenter < ballY- 35) { // als paddle onder bal is, -35 om te voorkomen dat paddle te veel schudt tijdens + 6 beweging
+              paddle2Y += 6; // + staat voor 6 toevoegen aan waarde, = staat voor nwe waarde bewaren in variable
+          }
+        else if (paddle2YCenter > ballY + 35){ -35 //om te voorkomen dat paddle te veel schudt tijdens - 6 beweging
+              paddle2Y -= 6; //- staat voor 6 aftrekken van waarde, = staat voor nwe waarde bewaren in variable
+          }
+    }
+
+    function moveEverything () {
+      if (showingWinScreen) {
+          return;
+      }
+        computerMovement ();
+
+        ballX += ballSpeedX; // + staat voor 6 toevoegen aan waarde, = staat voor nwe waarde bewaren in variable
+        ballY += ballSpeedY; //- staat voor 6 aftrekken van waarde, = staat voor nwe waarde bewaren in variable
+
+        if (ballX < 0) { //0 = aan linkerzijde van display/scherem
+                if (ballY > paddle1Y && // als bal onder top paddle bevindt
+                    ballY < paddle1Y+PADDLE_HEIGHT) { // en boven onderkant paddle
+                      ballSpeedX = -ballSpeedX; // bal terug kaatsen met paddle
+
+                      var deltaY = ballY // dit is voor bal control, ervoor zorgen dat bal naar een hoek kan worden gekaatst
+                        -(paddle1Y+PADDLE_HEIGHT/2)
+                      ballSpeedY = deltaY*0.35; //wordt gedeeld door 0.35 om te voorkomen dat ballSpeedY te snel gaat
+                    }
+                else {
+                  //score voor reset plaatsen, want zodra de winscore is bereikt hoeft er niet meer gereset te worden
+                  player2Score ++; //++ voegt 1 toe aan waarde en past variable aan, het is gelijk aan +=1
+                  ballReset(); //anders bal resetten
+
+                }
+        }
+        if (ballX > canvas.width) { //canvas.width refereert aan rechterzijde van display/scherm
+                if (ballY > paddle2Y && // als bal onder top paddle bevindt
+                    ballY < paddle2Y+PADDLE_HEIGHT) { // en boven onderkant paddle
+                    ballSpeedX = -ballSpeedX; // bal terug kaatsen met paddle
+
+                    var deltaY = ballY // dit is voor bal control, ervoor zorgen dat bal naar een hoek kan worden gekaatst
+                      -(paddle2Y+PADDLE_HEIGHT/2)
+                    ballSpeedY = deltaY*0.35; //wordt gedeeld door 0.35 om te voorkomen dat ballSpeedY te snel gaat
+                  }
+                else {
+                    //score voor reset plaatsen, want zodra de winscore is bereikt hoeft er niet meer gereset te worden
+                    player1Score ++; //++ voegt 1 toe aan waarde en past variable aan, het is gelijk aan +=1
+                    ballReset(); //anders bal resetten
+                  }
+        }
+
+        if (ballY < 0) { //0 = aan linkerzijde van display/scherem
+                ballSpeedY = -ballSpeedY; // om bal terug te laten kaatsen, gebruik zelfde snelheid maar dan in negatieve waarde
+        }
+
+        if (ballY > canvas.height) { //canvas.width refereert aan rechterzijde van display/scherm
+                ballSpeedY = -ballSpeedY;
+        }
+    }
+
+    function drawNet () {
+        for(var i=0;i<canvas.height; i+=40){ // =+40 = object om de 40 px herhalen en daarna variable updaten
+          colorRect (canvas.width/2-1,i,2,20,'white') //canvas.width/2-1 = in het midden, i = bovengenoemde variable , 2= 2px breed, 20=20px hoog, zwart
+        }
+      }
+
+    function drawEverything() {
+        //de volgende regel => zwart scherm
+        colorRect (0,0,canvas.width, canvas.height,'black')
+
+        if (showingWinScreen) {
+              canvasContext.fillStyle = 'white'; //kleur van onderstaande tekst
+
+              if (player1Score >= WINNING_SCORE) {
+                canvasContext.fillText("Left Player Wins", 350,200); //tekst wordt gedisplayd op 350 X en 200 Y
+              } else if (player2Score >= WINNING_SCORE) {
+                canvasContext.fillText("Right Player Wins", 350,200); //tekst wordt gedisplayd op 350 X en 200 Y
+              }
+            canvasContext.fillText("click to continue", 350,500); //tekst wordt gedisplayd op 350 X en 500 Y
+            return;
+        }
+
+        drawNet ();
+
+        //de volgende regel => links player paddle
+        colorRect(0,paddle1Y, PADDLE_THICKNESS,PADDLE_HEIGHT,'white'); //distance from left (x-as), distance from top (y-as) (both define top left corner), width object, height object//
+
+        //de volgende regel => rechts player paddle
+        colorRect(canvas.width - PADDLE_THICKNESS,paddle2Y, PADDLE_THICKNESS,PADDLE_HEIGHT,'white'); //distance from left 10 vd paddle (x-as), distance from top (y-as) (both define top left corner), width object, height object//
+
+        //de volgende regel => tekent bal
+        colorCircle(ballX, ballY, 10, 'white')
+
+        canvasContext.fillText (player1Score, 100,100); //tekst wordt gedisplayd op 100 X en 100 Y
+        canvasContext.fillText (player2Score, canvas.width-100,100); //tekst wordt gedisplayd op 100 X en 100 Y
+
+    }
+
+    function colorCircle (centerX, centerY, radius, drawColor) {
+      canvasContext.fillStyle = drawColor; //kleur van bal
+      canvasContext.beginPath (); //begin.Path heeft betrekking op hoe bal wordt gevormd???
+      canvasContext.arc(centerX, centerY, radius, 0, Math.PI*2, true); // zorgt voor cirkelvorm, 0,Math.PI*2=hoeken en radians van cirkel
+      canvasContext.fill();
+    }
+
+    function colorRect(leftX,topY, width,height, drawColor) {
+        canvasContext.fillStyle = drawColor;
+        canvasContext.fillRect (leftX,topY, width,height); //distance from left, distance from top, width object, height object//
+    }
+
+
+  </script>
+</html>
